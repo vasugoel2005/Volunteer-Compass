@@ -4,12 +4,7 @@ import { env } from '../config/env';
 import { ApiError } from '../utils/ApiError';
 import prisma from '../config/db';
 
-export interface AuthRequest extends Request {
-  user?: {
-    id: string;
-    role: string;
-  };
-}
+export interface AuthRequest extends Request {}
 
 export const authenticate = async (
   req: AuthRequest,
@@ -30,15 +25,14 @@ export const authenticate = async (
     const decoded = jwt.verify(token, env.jwtSecret) as { id: string };
     
     const user = await prisma.user.findUnique({
-      where: { id: decoded.id },
-      select: { id: true, role: true, isActive: true },
+      where: { id: decoded.id }
     });
 
     if (!user || !user.isActive) {
       throw ApiError.unauthorized('User not found or inactive');
     }
 
-    req.user = { id: user.id, role: user.role };
+    req.user = user;
     next();
   } catch (error) {
     if (error instanceof jwt.TokenExpiredError) {

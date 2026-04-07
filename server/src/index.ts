@@ -37,7 +37,7 @@ const startServer = async (): Promise<void> => {
   }
 };
 
-// ─── Graceful Shutdown ────────────────────────────────
+// Graceful Shutdown 
 const shutdown = async (signal: string): Promise<void> => {
   console.log(`\n${signal} received — shutting down gracefully...`);
   httpServer.close(async () => {
