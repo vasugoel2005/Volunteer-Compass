@@ -45,12 +45,18 @@ app.get('/health', (_req: Request, res: Response) => {
 
 // ─── API Routes (register here as you build features) ─
 import authRoutes from './routes/auth.routes';
+import userRoutes from './routes/users.routes';
+import eventRoutes from './routes/events.routes';
+import rsvpRoutes from './routes/rsvps.routes';
+import matchingRoutes from './routes/matching.routes';
+import dashboardRoutes from './routes/dashboard.routes';
+
 app.use('/api/auth', authRoutes);
-// app.use('/api/users',   userRoutes);
-// app.use('/api/events',  eventRoutes);
-// app.use('/api/rsvps',   rsvpRoutes);
-// app.use('/api/matches', matchingRoutes);
-// app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/events', eventRoutes);
+app.use('/api/rsvps', rsvpRoutes);
+app.use('/api/matches', matchingRoutes);
+app.use('/api/dashboard', dashboardRoutes);
 
 // ─── 404 Handler 
 app.use((_req: Request, res: Response) => {
