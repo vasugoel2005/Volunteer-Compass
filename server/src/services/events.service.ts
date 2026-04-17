@@ -1,11 +1,22 @@
 import { PrismaClient, EventStatus, Prisma } from '@prisma/client';
 import { ApiError } from '../utils/ApiError';
+import { findNearbyEvents } from './geo.service';
 
 const prisma = new PrismaClient();
 
 export const getAllEvents = async (filters: any) => {
-  const { status, city, categoryId, skip = 0, take = 20 } = filters;
+  const { status, city, categoryId, lat, lng, radiusKm = 50, skip = 0, take = 20 } = filters;
   
+  if (lat && lng) {
+    const latNum = parseFloat(lat);
+    const lngNum = parseFloat(lng);
+    const radiusNum = parseFloat(radiusKm);
+    
+    if (!isNaN(latNum) && !isNaN(lngNum)) {
+      return await findNearbyEvents(latNum, lngNum, radiusNum, Number(take));
+    }
+  }
+
   const where: Prisma.EventWhereInput = {};
   if (status) where.status = status as EventStatus;
   else where.status = EventStatus.PUBLISHED; // default view
@@ -21,7 +32,9 @@ export const getAllEvents = async (filters: any) => {
     orderBy: { startDate: 'asc' },
     include: {
       organizer: { select: { id: true, name: true, avatarUrl: true } },
-      categories: { include: { category: true } }
+      categories: { include: { category: true } },
+      skills: { include: { skill: true } },
+      _count: { select: { rsvps: true } }
     }
   });
 
@@ -89,7 +102,25 @@ export const updateEvent = async (id: string, organizerId: string, updateData: a
     data: dataToUpdate
   });
 
-  // Note: Handling resetting skills/categories requires clearing and re-adding, skipped for brevity in boilerplate
+  // Sync categories if provided
+  if (categories) {
+    await prisma.eventCategory.deleteMany({ where: { eventId: id } });
+    if (categories.length > 0) {
+      await prisma.eventCategory.createMany({
+        data: categories.map((c: string) => ({ eventId: id, categoryId: c }))
+      });
+    }
+  }
+
+  // Sync skills if provided
+  if (skills) {
+    await prisma.eventSkill.deleteMany({ where: { eventId: id } });
+    if (skills.length > 0) {
+      await prisma.eventSkill.createMany({
+        data: skills.map((s: string) => ({ eventId: id, skillId: s }))
+      });
+    }
+  }
 
   return getEventById(id);
 };
@@ -107,3 +138,8 @@ export const deleteEvent = async (id: string, organizerId: string) => {
   await prisma.event.delete({ where: { id } });
   return true;
 };
+
+export const searchNearbyEvents = async (lat: number, lng: number, radiusKm: number, limit: number) => {
+  return await findNearbyEvents(lat, lng, radiusKm, limit);
+};
+

@@ -5,6 +5,7 @@ import prisma from './config/db';
 import redis from './config/redis';
 import './config/firebase'; // initialise Firebase Admin on boot
 import { initSocket } from './socket';
+import { initializeEmailService } from './services/email.service';
 
 const httpServer = http.createServer(app);
 
@@ -23,6 +24,9 @@ const startServer = async (): Promise<void> => {
     } catch (err) {
       console.warn('⚠️  Redis unavailable — caching and jobs disabled');
     }
+
+    // Initialize Email
+    await initializeEmailService();
 
     // Start HTTP server
     httpServer.listen(env.port, () => {

@@ -50,6 +50,8 @@ import eventRoutes from './routes/events.routes';
 import rsvpRoutes from './routes/rsvps.routes';
 import matchingRoutes from './routes/matching.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import notificationsRoutes from './routes/notifications.routes';
+import categoriesRoutes from './routes/categories.routes';
 
 app.use('/api/auth', authRoutes);
 app.use('/api/users', userRoutes);
@@ -57,6 +59,8 @@ app.use('/api/events', eventRoutes);
 app.use('/api/rsvps', rsvpRoutes);
 app.use('/api/matches', matchingRoutes);
 app.use('/api/dashboard', dashboardRoutes);
+app.use('/api/notifications', notificationsRoutes);
+app.use('/api/categories', categoriesRoutes);
 
 // ─── 404 Handler 
 app.use((_req: Request, res: Response) => {

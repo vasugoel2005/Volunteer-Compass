@@ -1,160 +1,134 @@
 import { PrismaClient, Role, EventStatus } from '@prisma/client';
+// @ts-ignore
+import bcrypt from 'bcrypt';
 
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log('Starting seed...');
+  console.log('Seeding Database...');
 
-  // 1. Create Categories
-  const categoryEnvironment = await prisma.category.upsert({
-    where: { name: 'Environment' },
-    update: {},
-    create: { name: 'Environment' },
-  });
+  // 1. Clear existing data
+  await prisma.match.deleteMany();
+  await prisma.rsvp.deleteMany();
+  await prisma.eventCategory.deleteMany();
+  await prisma.eventSkill.deleteMany();
+  await prisma.userSkill.deleteMany();
+  await prisma.event.deleteMany();
+  await prisma.skill.deleteMany();
+  await prisma.category.deleteMany();
+  await prisma.user.deleteMany();
 
-  await prisma.category.upsert({
-    where: { name: 'Education' },
-    update: {},
-    create: { name: 'Education' },
-  });
-
-  await prisma.category.upsert({
-    where: { name: 'Health' },
-    update: {},
-    create: { name: 'Health' },
-  });
-
-  console.log('Categories seeded.');
-
-  // 2. Create Skills
-  await prisma.skill.upsert({
-    where: { name: 'Teaching' },
-    update: {},
-    create: { name: 'Teaching', category: 'Education' },
-  });
-
-  const skillGardening = await prisma.skill.upsert({
-    where: { name: 'Gardening' },
-    update: {},
-    create: { name: 'Gardening', category: 'Environment' },
-  });
-
-  const skillFirstAid = await prisma.skill.upsert({
-    where: { name: 'First Aid' },
-    update: {},
-    create: { name: 'First Aid', category: 'Health' },
-  });
-
-  console.log('Skills seeded.');
-
-  // 3. Create Users
-  await prisma.user.upsert({
-    where: { email: 'admin@volunteercompass.local' },
-    update: {},
-    create: {
-      email: 'admin@volunteercompass.local',
-      name: 'Admin User',
-      role: Role.ADMIN,
-      isVerified: true,
-      city: 'San Francisco',
-      state: 'CA',
-      country: 'USA',
-    },
-  });
-
-  const organizerUser = await prisma.user.upsert({
-    where: { email: 'organizer@volunteercompass.local' },
-    update: {},
-    create: {
-      email: 'organizer@volunteercompass.local',
-      name: 'Green Earth Foundation',
-      role: Role.ORGANIZER,
-      isVerified: true,
-      bio: 'A local non-profit dedicated to environmental sustainability.',
-      city: 'San Francisco',
-      state: 'CA',
-      country: 'USA',
-    },
-  });
-
-  await prisma.user.upsert({
-    where: { email: 'volunteer@volunteercompass.local' },
-    update: {},
-    create: {
-      email: 'volunteer@volunteercompass.local',
-      name: 'Jane Doe',
-      role: Role.VOLUNTEER,
-      isVerified: true,
-      bio: 'Passionate about helping the community and the planet.',
-      city: 'San Francisco',
-      state: 'CA',
-      country: 'USA',
-      latitude: 37.7749,
-      longitude: -122.4194,
-      skills: {
-        create: [
-          { skill: { connect: { id: skillGardening.id } } },
-          { skill: { connect: { id: skillFirstAid.id } } }
-        ]
-      }
-    },
-  });
-
-  console.log('Users seeded.');
-
-  // 4. Create Events
-  // Note: For events, we check if one exists for this organizer to prevent endless duplication on re-run
-  const existingEvents = await prisma.event.findMany({
-    where: { organizerId: organizerUser.id }
-  });
-
-  if (existingEvents.length === 0) {
-    const nextWeek = new Date();
-    nextWeek.setDate(nextWeek.getDate() + 7);
-
-    await prisma.event.create({
-      data: {
-        title: 'Community Garden Spring Cleanup',
-        description: 'Join us to prepare the local community garden for the upcoming spring season. We will be weeding, planting new seeds, and setting up the irrigation system.',
-        status: EventStatus.PUBLISHED,
-        organizer: { connect: { id: organizerUser.id } },
-        address: '123 Golden Gate Park',
-        city: 'San Francisco',
-        state: 'CA',
-        country: 'USA',
-        latitude: 37.7694,
-        longitude: -122.4862,
-        startDate: nextWeek,
-        endDate: new Date(nextWeek.getTime() + 4 * 60 * 60 * 1000), // 4 hours later
-        minVolunteers: 5,
-        maxVolunteers: 20,
-        skills: {
-          create: [
-            { skill: { connect: { id: skillGardening.id } } }
-          ]
-        },
-        categories: {
-          create: [
-            { category: { connect: { id: categoryEnvironment.id } } }
-          ]
-        }
-      }
-    });
-
-    console.log('Events seeded.');
-  } else {
-    console.log('Events already exist, skipping event creation.');
+  // 2. Insert Core Skills
+  const skillNames = ['Environment', 'Tech', 'Logistics', 'Design', 'Teaching', 'Care', 'Healthcare'];
+  const skills = [];
+  for (const name of skillNames) {
+    const s = await prisma.skill.create({ data: { name, category: 'General' } });
+    skills.push(s);
+  }
+  
+  // 3. Insert Core Categories
+  const categoryNames = ['Education', 'Environment', 'Health', 'Community', 'Technology'];
+  const categories = [];
+  for (const name of categoryNames) {
+    const c = await prisma.category.create({ data: { name } });
+    categories.push(c);
   }
 
-  console.log('Database seeding completed successfully.');
+  // 4. Create Demo Users
+  const passwordHash = await bcrypt.hash('password123', 10);
+  
+  const volunteer = await prisma.user.create({
+    data: {
+      name: 'Priya Sharma (Volunteer)',
+      email: 'volunteer@example.com',
+      passwordHash,
+      role: Role.VOLUNTEER,
+      city: 'New Delhi',
+      latitude: 28.6139,
+      longitude: 77.2090,
+      skills: {
+        create: [
+          { skillId: skills.find(s => s.name === 'Teaching')!.id },
+          { skillId: skills.find(s => s.name === 'Tech')!.id }
+        ]
+      }
+    }
+  });
+
+  const organizer = await prisma.user.create({
+    data: {
+      name: 'Green Earth NGO (Organizer)',
+      email: 'ngo@example.com',
+      passwordHash,
+      role: Role.ORGANIZER,
+      city: 'New Delhi',
+      latitude: 28.6139,
+      longitude: 77.2090,
+    }
+  });
+
+  console.log(`Created users: ${volunteer.id}, ${organizer.id}`);
+
+  // 5. Create Events
+  const eventsData = [
+    {
+      title: 'Park Cleanup Drive',
+      description: 'Join us to clean the central park and plant new saplings.',
+      status: EventStatus.PUBLISHED,
+      organizerId: organizer.id,
+      city: 'New Delhi',
+      latitude: 28.6100,
+      longitude: 77.2000,
+      startDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3), // +3 days
+      endDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 3 + 1000 * 60 * 60 * 3), // +3 hours
+      maxVolunteers: 20
+    },
+    {
+      title: 'Coding for Seniors',
+      description: 'Teach basic computer skills and internet safety to elderly citizens.',
+      status: EventStatus.PUBLISHED,
+      organizerId: organizer.id,
+      city: 'New Delhi',
+      latitude: 28.6200,
+      longitude: 77.2100,
+      startDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7), // +7 days
+      endDate: new Date(Date.now() + 1000 * 60 * 60 * 24 * 7 + 1000 * 60 * 60 * 2), // +2 hours
+      maxVolunteers: 5
+    }
+  ];
+
+  for (const ed of eventsData) {
+    const e = await prisma.event.create({ data: ed });
+    
+    // Add dummy skill requirements
+    if (e.title === 'Park Cleanup Drive') {
+      await prisma.eventSkill.create({
+        data: { eventId: e.id, skillId: skills.find(s => s.name === 'Environment')!.id }
+      });
+      await prisma.eventCategory.create({
+        data: { eventId: e.id, categoryId: categories.find(c => c.name === 'Environment')!.id }
+      });
+    } else {
+      await prisma.eventSkill.create({
+        data: { eventId: e.id, skillId: skills.find(s => s.name === 'Teaching')!.id }
+      });
+      await prisma.eventSkill.create({
+        data: { eventId: e.id, skillId: skills.find(s => s.name === 'Tech')!.id }
+      });
+      await prisma.eventCategory.create({
+        data: { eventId: e.id, categoryId: categories.find(c => c.name === 'Technology')!.id }
+      });
+    }
+  }
+
+  console.log('✅ Seeding complete.');
 }
 
 main()
-  .then(async () => {
-    await prisma.$disconnect();
-  })
-  .catch(async (e) => {
+  .catch((e) => {
     console.error(e);
-    await prisma.$disconnect();
     process.exit(1);
+  })
+  .finally(async () => {
+    await prisma.$disconnect();
   });
