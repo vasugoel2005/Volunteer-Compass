@@ -148,7 +148,7 @@ export default function Home({ setPage }) {
 
           <div style={{ display:"flex", justifyContent:"center", gap:12, flexWrap:"wrap", animation:"fadeUp 0.7s 0.3s ease both" }}>
             <BtnGold onClick={() => setPage("signup")}>Get Started →</BtnGold>
-            <BtnGhost onClick={() => setPage("about")}>For Organizations</BtnGhost>
+            <BtnGhost onClick={() => setPage("signup-org")}>For Organizations</BtnGhost>
           </div>
 
           {/* Stats strip */}
@@ -229,7 +229,7 @@ export default function Home({ setPage }) {
           </p>
           <div style={{ display:"flex", justifyContent:"center", gap:12, flexWrap:"wrap", position:"relative", zIndex:2 }}>
             <BtnInk onClick={() => setPage("signup")}>Get Started Free</BtnInk>
-            <BtnOutlineInk onClick={() => setPage("about")}>For Organizations</BtnOutlineInk>
+            <BtnOutlineInk onClick={() => setPage("signup-org")}>For Organizations</BtnOutlineInk>
           </div>
         </div>
       </section>

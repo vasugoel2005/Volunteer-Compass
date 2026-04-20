@@ -8,10 +8,53 @@ export const getUserRsvps = async (userId: string) => {
     where: { userId },
     include: {
       event: {
-        select: { id: true, title: true, startDate: true, status: true, city: true }
+        select: { id: true, title: true, startDate: true, endDate: true, status: true, city: true, organizer: { select: { id: true, name: true, isVerified: true } } }
       }
     },
     orderBy: { createdAt: 'desc' }
+  });
+};
+
+export const getMyHours = async (userId: string) => {
+  return await prisma.rsvp.findMany({
+    where: { userId, checkedIn: true },
+    include: {
+      event: {
+        select: { id: true, title: true, startDate: true, endDate: true, organizer: { select: { id: true, name: true, isVerified: true } } }
+      }
+    },
+    orderBy: { checkedInAt: 'desc' }
+  });
+};
+
+export const checkInRsvp = async (rsvpId: string, organizerId: string) => {
+  const rsvp = await prisma.rsvp.findUnique({
+    where: { id: rsvpId },
+    include: { event: true }
+  });
+
+  if (!rsvp) throw new ApiError(404, 'RSVP not found');
+  if (rsvp.event.organizerId !== organizerId) {
+    throw new ApiError(403, 'Not authorized to check-in volunteers for this event');
+  }
+
+  // Calculate hours based on event duration
+  const startMs = rsvp.event.startDate.getTime();
+  const endMs = rsvp.event.endDate.getTime();
+  const hoursVolunteered = Math.max(0, (endMs - startMs) / (1000 * 60 * 60));
+
+  return await prisma.rsvp.update({
+    where: { id: rsvpId },
+    data: {
+      checkedIn: true,
+      checkedInAt: new Date(),
+      hoursVolunteered,
+      status: 'CONFIRMED',
+    },
+    include: {
+      event: { select: { id: true, title: true, startDate: true, endDate: true } },
+      user: { select: { id: true, name: true, email: true } }
+    }
   });
 };
 

@@ -21,12 +21,16 @@ export const registerUser = async (data: any) => {
       passwordHash,
       name: data.name,
       role: data.role || 'VOLUNTEER',
+      bio: data.bio || null,
+      city: data.city || null,
     },
     select: {
       id: true,
       email: true,
       name: true,
       role: true,
+      city: true,
+      bio: true,
       createdAt: true,
     },
   });

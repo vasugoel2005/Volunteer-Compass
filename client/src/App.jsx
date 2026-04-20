@@ -10,6 +10,7 @@ import Profile   from "./pages/Profile";
 import Login     from "./pages/Login";
 import Signup    from "./pages/Signup";
 import ForgotPassword from "./pages/ForgotPassword";
+import VolunteerHours from "./pages/VolunteerHours";
 import { AuthProvider } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
 import { SocketProvider } from "./context/SocketContext";
@@ -31,8 +32,10 @@ export default function App() {
       case "create-event": return <CreateEvent setPage={setPage} />;
       case "profile":   return <Profile   setPage={setPage} />;
       case "login":     return <Login     setPage={setPage} />;
-      case "signup":    return <Signup    setPage={setPage} />;
+      case "signup":    return <Signup    setPage={setPage} defaultRole="VOLUNTEER" />;
+      case "signup-org": return <Signup   setPage={setPage} defaultRole="ORGANIZER" />;
       case "forgot-password": return <ForgotPassword setPage={setPage} />;
+      case "hours":           return <VolunteerHours   setPage={setPage} />;
       default:          return <Home      setPage={setPage} />;
     }
   };

@@ -49,14 +49,28 @@ export default function Navbar({ page, setPage }) {
       <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
         {user ? (
           <>
+            {user.role === 'VOLUNTEER' && (
+              <button
+                onClick={() => setPage('hours')}
+                style={{
+                  background: 'none', color: 'rgba(255,255,255,0.55)', border: 'none',
+                  fontFamily: "'Cabinet Grotesk', sans-serif",
+                  fontWeight: 700, fontSize: '0.72rem',
+                  textTransform: 'uppercase', letterSpacing: '0.8px',
+                  cursor: 'pointer', padding: '6px 10px',
+                }}
+              >
+                My Hours
+              </button>
+            )}
             {user.role === 'ORGANIZER' && (
               <button
-                onClick={() => setPage("create-event")}
+                onClick={() => setPage('create-event')}
                 style={{
-                  background: T.gold, color: T.ink, border: "none",
-                  padding: "8px 14px", borderRadius: 9,
+                  background: T.gold, color: T.ink, border: 'none',
+                  padding: '8px 14px', borderRadius: 9,
                   fontFamily: "'Cabinet Grotesk', sans-serif",
-                  fontWeight: 800, fontSize: "0.75rem", cursor: "pointer",
+                  fontWeight: 800, fontSize: '0.75rem', cursor: 'pointer',
                 }}
               >
                 + Create Event

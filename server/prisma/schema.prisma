@@ -211,6 +211,7 @@ model Rsvp {
   note        String?
   checkedIn   Boolean     @default(false)
   checkedInAt DateTime?
+  hoursVolunteered Float?
 
   user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
   event       Event       @relation(fields: [eventId], references: [id], onDelete: Cascade)

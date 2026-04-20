@@ -3,6 +3,16 @@ import { asyncHandler } from '../utils/asyncHandler';
 import { AuthRequest } from '../middleware/auth.middleware';
 import * as rsvpsService from '../services/rsvps.service';
 
+export const getMyHours = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const hours = await rsvpsService.getMyHours(req.user!.id);
+  res.status(200).json({ success: true, message: 'Volunteer hours fetched', data: hours });
+});
+
+export const checkIn = asyncHandler(async (req: AuthRequest, res: Response) => {
+  const rsvp = await rsvpsService.checkInRsvp(req.params.id, req.user!.id);
+  res.status(200).json({ success: true, message: 'Volunteer checked in successfully', data: rsvp });
+});
+
 export const getMyRsvps = asyncHandler(async (req: AuthRequest, res: Response) => {
   const rsvps = await rsvpsService.getUserRsvps(req.user!.id);
   

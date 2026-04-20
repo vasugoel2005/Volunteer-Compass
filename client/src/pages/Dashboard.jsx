@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect, Suspense, lazy } from "react";
 import { T } from "../theme";
 import { BtnGold } from "../components/Buttons";
+import SkeletonCard from "../components/SkeletonCard";
 
 import { getEventsApi, rsvpApi, leaveRsvpApi } from "../api/events.api";
 import { useAuth } from "../context/AuthContext";
-import { useEffect } from "react";
 
-const SEED_EVENTS = []; // Keep definition to avoid reference errors if not completely stripped
+// Lazy-load the heavy map component so the main bundle stays small
+const EventMap = lazy(() => import("../components/EventMap"));
 
 const SKILL_COLORS = {
   Environment: { bg:"#E8F5E9", color:"#2E7D32" },
@@ -53,7 +54,18 @@ function EventRow({ ev, onJoin, onLeave, isLast }) {
       }}
     >
       <div style={{ flex:1, minWidth:180 }}>
-        <div style={{ fontWeight:700, fontSize:"0.9rem", color:T.ink }}>{ev.title}</div>
+        <div style={{ fontWeight:700, fontSize:"0.9rem", color:T.ink, display:"flex", alignItems:"center", gap:6 }}>
+          {ev.title}
+          {ev.organizerVerified && (
+            <span title="Verified Organization" style={{
+              background:"#E8F5E9", color:"#2E7D32",
+              borderRadius:99, padding:"2px 7px",
+              fontSize:"0.62rem", fontWeight:700, letterSpacing:"0.3px",
+            }}>
+              ✅ Verified Org
+            </span>
+          )}
+        </div>
         <div style={{ fontSize:"0.74rem", color:T.muted, marginTop:2 }}>{ev.org} · {ev.date}</div>
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:10, flexWrap:"wrap" }}>
@@ -90,23 +102,28 @@ function EventRow({ ev, onJoin, onLeave, isLast }) {
 
 /* ── DASHBOARD PAGE ── */
 export default function Dashboard({ setPage }) {
-  const [events, setEvents] = useState([]);
+  const [events, setEvents]       = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [userLocation, setUserLocation] = useState(null);
   const { user } = useAuth();
-  const [filter, setFilter]     = useState("all");
+  const [filter, setFilter]       = useState("all");
   const [activeTab, setActiveTab] = useState("upcoming");
-  const [toast, setToast]       = useState(null);
-  const [search, setSearch]     = useState("");
+  const [toast, setToast]         = useState(null);
+  const [search, setSearch]       = useState("");
 
   /* Map backend event to UI format */
   const formatEvent = (e) => ({
     id: e.id,
     title: e.title,
     org: e.organizer?.name || 'Organizer',
+    organizerVerified: e.organizer?.isVerified || false,
     date: new Date(e.startDate).toLocaleDateString("en-US", { month: "short", day: "numeric" }),
-    spots: Math.max(0, e.maxVolunteers - (e._count?.rsvps || 0)),
+    spots: Math.max(0, (e.maxVolunteers || 0) - (e._count?.rsvps || 0)),
     skill: e.skills && e.skills.length > 0 ? e.skills[0].skill.name : 'Other',
     joined: e.rsvps?.some(r => r.userId === user?.id && r.status !== 'CANCELLED') || false,
-    rsvpId: e.rsvps?.find(r => r.userId === user?.id && r.status !== 'CANCELLED')?.id
+    rsvpId: e.rsvps?.find(r => r.userId === user?.id && r.status !== 'CANCELLED')?.id,
+    latitude: e.latitude,
+    longitude: e.longitude,
   });
 
   const joined   = events.filter(e => e.joined);
@@ -124,44 +141,42 @@ export default function Dashboard({ setPage }) {
 
   useEffect(() => {
     const fetchEventsWithLocation = () => {
-      // Prompt user for location
       if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(
           async (position) => {
             const { latitude, longitude } = position.coords;
+            setUserLocation({ lat: latitude, lng: longitude });
             try {
               const res = await getEventsApi({ lat: latitude, lng: longitude });
               const rawEvents = res.data?.events || res.data || [];
               setEvents(rawEvents.map(formatEvent));
-              showToast("Showing events near you!");
             } catch (err) {
               showToast("Error loading nearby events");
+            } finally {
+              setIsLoading(false);
             }
           },
-          async (error) => {
-            console.log("Geolocation error or denied:", error.message);
-            // Fallback to standard fetch
+          async () => {
+            // Fallback — no location access
             try {
               const res = await getEventsApi();
               const rawEvents = res.data?.events || res.data || [];
               setEvents(rawEvents.map(formatEvent));
             } catch (err) {
               showToast("Error loading events");
+            } finally {
+              setIsLoading(false);
             }
           }
         );
       } else {
-        // Fallback for browsers without geolocation
-        const loadStandardEvents = async () => {
-          try {
-            const res = await getEventsApi();
+        getEventsApi()
+          .then(res => {
             const rawEvents = res.data?.events || res.data || [];
             setEvents(rawEvents.map(formatEvent));
-          } catch (err) {
-            showToast("Error loading events");
-          }
-        };
-        loadStandardEvents();
+          })
+          .catch(() => showToast("Error loading events"))
+          .finally(() => setIsLoading(false));
       }
     };
 
@@ -199,6 +214,12 @@ export default function Dashboard({ setPage }) {
     { num: joined.length,    label:"Events Joined"  },
   ];
 
+  const TABS = [
+    { key:"upcoming", label:`Upcoming (${upcoming.length})` },
+    { key:"joined",   label:`Joined (${joined.length})` },
+    { key:"map",      label:"🗺 Explore Map" },
+  ];
+
   return (
     <div style={{ maxWidth:980, margin:"0 auto", padding:"64px 24px", position:"relative" }}>
       <Toast msg={toast} />
@@ -209,11 +230,17 @@ export default function Dashboard({ setPage }) {
           <h1 style={{ fontFamily:"'Fraunces',serif", fontWeight:900, fontSize:"2.3rem", color:T.ink, letterSpacing:"-1.5px", marginBottom:6 }}>
             Your Dashboard
           </h1>
-          <p style={{ color:T.muted, fontSize:"0.95rem" }}>Welcome back! Here's what's happening near you.</p>
+          <p style={{ color:T.muted, fontSize:"0.95rem" }}>
+            {userLocation
+              ? "📍 Showing events near your current location."
+              : "Welcome back! Here's what's happening near you."}
+          </p>
         </div>
-        <BtnGold onClick={() => setPage("home")} style={{ padding:"10px 20px", fontSize:"0.82rem" }}>
-          ← Explore Map
-        </BtnGold>
+        {user?.role === 'VOLUNTEER' && (
+          <BtnGold onClick={() => setPage("hours")} style={{ padding:"10px 20px", fontSize:"0.82rem" }}>
+            🏅 My Hours
+          </BtnGold>
+        )}
       </div>
 
       {/* Stats */}
@@ -228,10 +255,7 @@ export default function Dashboard({ setPage }) {
 
       {/* Tabs */}
       <div style={{ display:"flex", gap:6, marginBottom:20 }}>
-        {[
-          { key:"upcoming", label:`Upcoming (${upcoming.length})` },
-          { key:"joined",   label:`Joined (${joined.length})` },
-        ].map(tab => (
+        {TABS.map(tab => (
           <button
             key={tab.key}
             onClick={() => setActiveTab(tab.key)}
@@ -250,7 +274,18 @@ export default function Dashboard({ setPage }) {
         ))}
       </div>
 
-      {/* Upcoming tab */}
+      {/* ── Map Tab ── */}
+      {activeTab === "map" && (
+        <Suspense fallback={
+          <div style={{ background:T.cream, borderRadius:20, height:480, display:"flex", alignItems:"center", justifyContent:"center", color:T.muted, fontSize:"0.9rem" }}>
+            Loading map...
+          </div>
+        }>
+          <EventMap events={events} userLocation={userLocation} onJoin={handleJoin} />
+        </Suspense>
+      )}
+
+      {/* ── Upcoming tab ── */}
       {activeTab === "upcoming" && (
         <>
           {/* Search + filter row */}
@@ -295,9 +330,13 @@ export default function Dashboard({ setPage }) {
           <div style={{ background:T.white, border:`1px solid ${T.border}`, borderRadius:20, overflow:"hidden" }}>
             <div style={{ padding:"16px 24px", borderBottom:`1px solid ${T.border}`, fontWeight:800, fontSize:"0.95rem", color:T.ink, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
               <span>Nearby Events</span>
-              <span style={{ fontSize:"0.78rem", color:T.muted, fontWeight:500 }}>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>
+              {!isLoading && <span style={{ fontSize:"0.78rem", color:T.muted, fontWeight:500 }}>{filtered.length} result{filtered.length !== 1 ? "s" : ""}</span>}
             </div>
-            {filtered.length === 0 ? (
+
+            {/* Skeleton loaders while fetching */}
+            {isLoading ? (
+              [1,2,3,4].map(i => <SkeletonCard key={i} />)
+            ) : filtered.length === 0 ? (
               <div style={{ padding:"48px 24px", textAlign:"center", color:T.muted }}>
                 <div style={{ fontSize:"1.8rem", marginBottom:12 }}>🔍</div>
                 <div style={{ fontWeight:700, marginBottom:6 }}>No events found</div>
@@ -315,7 +354,7 @@ export default function Dashboard({ setPage }) {
         </>
       )}
 
-      {/* Joined tab */}
+      {/* ── Joined tab ── */}
       {activeTab === "joined" && (
         <div style={{ background:T.white, border:`1px solid ${T.border}`, borderRadius:20, overflow:"hidden" }}>
           <div style={{ padding:"16px 24px", borderBottom:`1px solid ${T.border}`, fontWeight:800, fontSize:"0.95rem", color:T.ink }}>
