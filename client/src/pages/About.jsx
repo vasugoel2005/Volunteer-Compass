@@ -11,10 +11,10 @@ const CARDS = [
 ];
 
 const TEAM = [
-  { initials: "AR", name: "Aanya Rao",     role: "Co-Founder & CEO",      color: "#E8F5E9", text: "#2E7D32" },
-  { initials: "MS", name: "Mihir Shah",    role: "Co-Founder & CTO",      color: "#E3F2FD", text: "#1565C0" },
-  { initials: "PK", name: "Priya Kapoor",  role: "Head of Partnerships",  color: "#FDE9A8", text: "#92400E" },
-  { initials: "RV", name: "Rahul Verma",   role: "Lead Designer",         color: "#FCE4EC", text: "#AD1457" },
+  { initials: "YT", name: "Yash Tyagi",    color: "#E8F5E9", text: "#2E7D32" },
+  { initials: "AS", name: "Aditya Sharma", color: "#E3F2FD", text: "#1565C0" },
+  { initials: "VG", name: "Vasu Goel",     color: "#FDE9A8", text: "#92400E" },
+  { initials: "CS", name: "Chandan Singh", color: "#FCE4EC", text: "#AD1457" },
 ];
 
 export default function About({ setPage }) {
@@ -66,8 +66,7 @@ export default function About({ setPage }) {
             <div style={{ width:56, height:56, borderRadius:"50%", background:m.color, color:m.text, display:"flex", alignItems:"center", justifyContent:"center", fontFamily:"'Fraunces',serif", fontWeight:900, fontSize:"1.1rem", margin:"0 auto 14px" }}>
               {m.initials}
             </div>
-            <div style={{ fontWeight:800, fontSize:"0.95rem", color:T.ink, marginBottom:4 }}>{m.name}</div>
-            <div style={{ fontSize:"0.78rem", color:T.muted }}>{m.role}</div>
+            <div style={{ fontWeight:800, fontSize:"0.95rem", color:T.ink }}>{m.name}</div>
           </div>
         ))}
       </div>
