@@ -66,7 +66,7 @@ export const createEvent = async (organizerId: string, eventData: any) => {
       organizerId,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      status: EventStatus.DRAFT, // Always created as DRAFT initially
+      status: EventStatus.PUBLISHED,
     }
   });
 
@@ -77,8 +77,18 @@ export const createEvent = async (organizerId: string, eventData: any) => {
   }
 
   if (skills && skills.length > 0) {
+    const skillRecords = await Promise.all(
+      skills.map(async (skillName: string) => {
+        return await prisma.skill.upsert({
+          where: { name: skillName },
+          update: {},
+          create: { name: skillName }
+        });
+      })
+    );
+
     await prisma.eventSkill.createMany({
-      data: skills.map((s: string) => ({ eventId: event.id, skillId: s }))
+      data: skillRecords.map(s => ({ eventId: event.id, skillId: s.id }))
     });
   }
 
@@ -116,8 +126,18 @@ export const updateEvent = async (id: string, organizerId: string, updateData: a
   if (skills) {
     await prisma.eventSkill.deleteMany({ where: { eventId: id } });
     if (skills.length > 0) {
+      const skillRecords = await Promise.all(
+        skills.map(async (skillName: string) => {
+          return await prisma.skill.upsert({
+            where: { name: skillName },
+            update: {},
+            create: { name: skillName }
+          });
+        })
+      );
+
       await prisma.eventSkill.createMany({
-        data: skills.map((s: string) => ({ eventId: id, skillId: s }))
+        data: skillRecords.map(s => ({ eventId: id, skillId: s.id }))
       });
     }
   }

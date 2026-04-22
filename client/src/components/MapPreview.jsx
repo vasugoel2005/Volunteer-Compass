@@ -3,8 +3,30 @@ import { T } from "../theme";
 import RealMap from "./RealMap";
 import { getEventsApi } from "../api/events.api";
 
+// New Delhi as last-resort fallback only
+const INDIA_FALLBACK = { lat: 28.6139, lng: 77.2090 };
+
 export default function MapPreview({ onOpenMap }) {
   const [events, setEvents] = useState([]);
+  const [userLocation, setUserLocation] = useState(null);
+
+  // Fetch the user's real GPS position
+  useEffect(() => {
+    if ("geolocation" in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        },
+        () => {
+          // Permission denied or unavailable — fall back to Delhi
+          setUserLocation(INDIA_FALLBACK);
+        },
+        { timeout: 6000 }
+      );
+    } else {
+      setUserLocation(INDIA_FALLBACK);
+    }
+  }, []);
 
   useEffect(() => {
     getEventsApi().then(res => {
@@ -23,7 +45,7 @@ export default function MapPreview({ onOpenMap }) {
     }}>
       {/* Canvas */}
       <div style={{ height: 320, position: "relative" }}>
-        <RealMap events={events} />
+        <RealMap events={events} userLocation={userLocation} />
       </div>
 
       {/* Bar */}

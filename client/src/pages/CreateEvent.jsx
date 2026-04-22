@@ -70,7 +70,8 @@ export default function CreateEvent({ setPage }) {
     
     try {
       const payload = {
-        ...formData,
+        title: formData.title,
+        description: formData.description,
         address: formData.locationQuery,
         startDate: new Date(formData.startDate).toISOString(),
         endDate: new Date(formData.endDate).toISOString(),
