@@ -19,10 +19,14 @@ const startServer = async (): Promise<void> => {
     console.log('✅ Database connected');
 
     // Connect Redis (non-fatal — server runs without it)
-    try {
-      await redis.connect();
-    } catch (err) {
-      console.warn('⚠️  Redis unavailable — caching and jobs disabled');
+    if (env.redis.enabled) {
+      try {
+        await redis.connect();
+      } catch (err) {
+        console.warn('⚠️  Redis unavailable — caching and jobs disabled');
+      }
+    } else {
+      console.warn('⚠️  Redis not configured — caching and jobs disabled');
     }
 
     // Initialize Email

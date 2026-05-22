@@ -6,9 +6,9 @@ const redis = new Redis({
   port: env.redis.port,
   password: env.redis.password,
   retryStrategy: (times: number) => {
-    // Retry with exponential backoff, max 30s
-    const delay = Math.min(times * 500, 30000);
-    return delay;
+    // Stop retrying after 3 attempts — prevents hanging on Render (no Redis)
+    if (times > 3) return null;
+    return Math.min(times * 500, 2000);
   },
   maxRetriesPerRequest: 3,
   lazyConnect: true,
