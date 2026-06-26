@@ -3,8 +3,8 @@ services:
     name: volunteer-compass-api
     env: node
     rootDir: server
-    buildCommand: npm install --include=dev && npx prisma generate && npm run build
-    startCommand: npx prisma migrate deploy && node dist/index.js
+    buildCommand: npm install --include=dev && npx prisma generate && npx prisma migrate deploy && npm run build
+    startCommand: node dist/index.js
     plan: free
     envVars:
       - key: NODE_ENV
@@ -18,7 +18,7 @@ services:
       - key: JWT_EXPIRES_IN
         value: 7d
       - key: CLIENT_URL
-        sync: false   # Set this to your Vercel URL after deploying frontend
+        value: https://volunteer-compass-tawny.vercel.app
       - key: PORT
         value: 10000
 
