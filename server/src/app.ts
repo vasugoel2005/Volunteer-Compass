@@ -10,9 +10,25 @@ const app: Application = express();
 
 // ─── Security Middleware 
 app.use(helmet());
+// Allow: configured CLIENT_URL, localhost dev, and all Vercel preview/production
+// deployments for this project (volunteer-compass-*.vercel.app)
+const allowedOriginPattern = /^https:\/\/volunteer-compass[a-z0-9-]*\.vercel\.app$/;
+
 app.use(
   cors({
-    origin: [env.clientUrl, 'http://localhost:5173'],
+    origin: (origin, callback) => {
+      // Allow requests with no origin (curl, Postman, server-to-server)
+      if (!origin) return callback(null, true);
+      if (
+        origin === env.clientUrl ||
+        origin === 'http://localhost:5173' ||
+        origin === 'http://localhost:3000' ||
+        allowedOriginPattern.test(origin)
+      ) {
+        return callback(null, true);
+      }
+      callback(new Error(`CORS: origin ${origin} not allowed`));
+    },
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization'],
