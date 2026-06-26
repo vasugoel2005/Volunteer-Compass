@@ -41,6 +41,16 @@ function AppInner() {
     window.scrollTo({ top: 0, behavior: "smooth" });
   }, [page]);
 
+  // Listen for vc:navigate events dispatched by API client (e.g. on 401)
+  useEffect(() => {
+    const handler = (e) => {
+      const target = e.detail?.page;
+      if (target) setPage(target);
+    };
+    window.addEventListener('vc:navigate', handler);
+    return () => window.removeEventListener('vc:navigate', handler);
+  }, []);
+
   // Redirect logic after auth state is known
   useEffect(() => {
     if (loading) return;

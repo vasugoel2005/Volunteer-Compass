@@ -30,10 +30,10 @@ apiClient.interceptors.response.use(
       // Auto logout if token is expired or invalid
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      // Optionally trigger an event or reload to clear state, but context handles it via init.
-      if (window.location.pathname !== '/login' && window.location.pathname !== '/signup') {
-        window.location.href = '/login';
-      }
+      localStorage.removeItem('vc_page');
+      // Use a custom event so the SPA page-state router handles navigation
+      // (avoids a full-page reload that would break Vercel/SPA routing)
+      window.dispatchEvent(new CustomEvent('vc:navigate', { detail: { page: 'login' } }));
     }
     // Return a unified error object
     return Promise.reject(

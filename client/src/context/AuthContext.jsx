@@ -44,8 +44,10 @@ export function AuthProvider({ children }) {
 
   const logout = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('vc_page');
     setUser(null);
-    window.location.href = '/login';
+    // Dispatch a custom event so the SPA router can handle navigation
+    window.dispatchEvent(new CustomEvent('vc:navigate', { detail: { page: 'login' } }));
   };
 
   return (
