@@ -1,13 +1,33 @@
 import nodemailer from 'nodemailer';
+import { env } from '../config/env';
 
 let transporter: nodemailer.Transporter | null = null;
 
-export const initializeEmailService = async () => {
-  // Use Ethereal Email for testing/development
+export const initializeEmailService = async (): Promise<void> => {
+  // In production, use configured SMTP credentials (never call Ethereal)
+  if (env.isProduction) {
+    if (env.smtp.enabled) {
+      transporter = nodemailer.createTransport({
+        host: env.smtp.host,
+        port: env.smtp.port,
+        secure: env.smtp.port === 465,
+        auth: {
+          user: env.smtp.user,
+          pass: env.smtp.pass,
+        },
+      });
+      console.log('✅ Nodemailer (SMTP) initialized');
+    } else {
+      console.warn('⚠️  SMTP not configured — email features will be unavailable');
+    }
+    return;
+  }
+
+  // Development-only: use Ethereal for easy local testing
   try {
     const testAccount = await nodemailer.createTestAccount();
     transporter = nodemailer.createTransport({
-      host: "smtp.ethereal.email",
+      host: 'smtp.ethereal.email',
       port: 587,
       secure: false,
       auth: {
@@ -15,9 +35,9 @@ export const initializeEmailService = async () => {
         pass: testAccount.pass,
       },
     });
-    console.log("✅ Nodemailer (Ethereal Email) initialized");
+    console.log('✅ Nodemailer (Ethereal Email) initialized');
   } catch (error) {
-    console.error("Failed to initialize email service:", error);
+    console.warn('⚠️  Ethereal Email unavailable — email features disabled in dev');
   }
 };
 
