@@ -50,7 +50,11 @@ const shutdown = async (signal: string): Promise<void> => {
   console.log(`\n${signal} received — shutting down gracefully...`);
   httpServer.close(async () => {
     await prisma.$disconnect();
-    await redis.quit();
+    try {
+      await redis.quit();
+    } catch {
+      // Redis may not have been connected — safe to ignore
+    }
     console.log('✅ Server shut down cleanly');
     process.exit(0);
   });
@@ -59,10 +63,10 @@ const shutdown = async (signal: string): Promise<void> => {
 process.on('SIGTERM', () => shutdown('SIGTERM'));
 process.on('SIGINT', () => shutdown('SIGINT'));
 
-// Catch unhandled promise rejections
+// Log unhandled promise rejections but don't exit — let the server keep running
+// (Transient errors from ioredis retries, etc. should not kill the process)
 process.on('unhandledRejection', (reason) => {
-  console.error('Unhandled rejection:', reason);
-  process.exit(1);
+  console.error('⚠️  Unhandled rejection (non-fatal):', reason);
 });
 
 startServer();
